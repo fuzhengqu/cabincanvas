@@ -31,11 +31,12 @@ CabinCanvas 不是 CarLife+ 的换皮，而是一个车机桌面层：
 
 要求：
 
-- JDK 21+（本项目默认使用 Android Studio JBR，见 `gradle.properties` 的 `org.gradle.java.home`）
+- JDK 21+（推荐 Android Studio 自带的 JBR；只在当前终端会话设置 `JAVA_HOME`，不要改系统环境变量）
 - Android SDK 37.2 / build-tools 37.0.0
 - `local.properties` 指向本机 SDK（不要提交）
 
 ```powershell
+$env:JAVA_HOME="C:\Program Files\Android\Android Studio\jbr"
 .\gradlew.bat :app:assembleDebug
 .\gradlew.bat :probe:c:assembleDebug
 ```
