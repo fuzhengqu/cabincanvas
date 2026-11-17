@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">CabinCanvas</string>
+    <string name="probe_missing">未安装 M0 探针 C</string>
+</resources>
