@@ -35,6 +35,8 @@ data class CarMedia(
     val album: String,
     val durationMs: Long,
     val accent: Color,
+    val artwork: ImageBitmap? = null,
+    val packageName: String? = null,
 )
 
 @Immutable
@@ -46,6 +48,13 @@ data class CarContact(
 )
 
 @Immutable
+data class CarCallEntry(
+    val contact: CarContact,
+    val label: String,
+    val date: Long,
+)
+
+@Immutable
 data class CarNotification(
     val app: String,
     val title: String,
@@ -53,6 +62,8 @@ data class CarNotification(
     val time: String,
     val color: Color,
     val canReply: Boolean = false,
+    val key: String? = null,
+    val packageName: String? = null,
 )
 
 @Immutable

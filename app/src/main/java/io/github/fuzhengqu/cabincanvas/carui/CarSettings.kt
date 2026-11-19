@@ -73,6 +73,11 @@ fun CarSettingsScreen(
     onDiagnostics: () -> Unit,
     onOnboarding: () -> Unit,
     onSimulateNotification: () -> Unit,
+    notificationAccess: Boolean = false,
+    phoneAccess: Boolean = false,
+    onOpenNotificationAccess: () -> Unit = {},
+    onRequestPhonePermissions: () -> Unit = {},
+    onRefreshData: () -> Unit = {},
 ) {
     val palette = LocalCarPalette.current
     val dimens = LocalCarDimens.current
@@ -87,6 +92,31 @@ fun CarSettingsScreen(
             verticalArrangement = Arrangement.spacedBy(dimens.gap),
             contentPadding = androidx.compose.foundation.layout.PaddingValues(bottom = dimens.pad),
         ) {
+            item {
+                SettingsGroup("数据源") {
+                    SettingRow(
+                        CarGlyph.NOTIFICATION,
+                        "通知使用权",
+                        if (notificationAccess) "已授权 · 通知与媒体会话可用" else "未授权 · 通知/媒体使用示例数据",
+                        trailing = if (notificationAccess) "已开启" else "去授权",
+                        onClick = onOpenNotificationAccess,
+                    )
+                    SettingRow(
+                        CarGlyph.PHONE,
+                        "电话与联系人",
+                        if (phoneAccess) "已授权 · 联系人与通话状态可用" else "未授权 · 使用示例联系人",
+                        trailing = if (phoneAccess) "已开启" else "授权",
+                        onClick = onRequestPhonePermissions,
+                    )
+                    SettingRow(
+                        CarGlyph.REFRESH,
+                        "刷新媒体会话",
+                        "在手机上播放音乐后点此刷新",
+                        trailing = "刷新",
+                        onClick = onRefreshData,
+                    )
+                }
+            }
             item {
                 SettingsGroup("连接") {
                     SettingRow(CarGlyph.USB, "连接方式", "USB 有线", trailing = "已连接", onClick = onDiagnostics)

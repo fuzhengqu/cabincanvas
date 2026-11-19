@@ -1,6 +1,7 @@
 package io.github.fuzhengqu.cabincanvas.carui
 
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -25,9 +26,11 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -341,7 +344,7 @@ fun MediaCard(
     val dimens = LocalCarDimens.current
     GlassCard(modifier = modifier.fillMaxSize(), onClick = onOpen) {
         Row(verticalAlignment = Alignment.CenterVertically) {
-            AlbumArt(media.accent, size = if (compact) 52.dp else 66.dp)
+            AlbumArt(media.accent, size = if (compact) 52.dp else 66.dp, artwork = media.artwork)
             Spacer(Modifier.width(dimens.gap))
             Column(modifier = Modifier.weight(1f)) {
                 Text(
@@ -360,7 +363,10 @@ fun MediaCard(
                 )
                 if (!compact) {
                     Spacer(Modifier.height(dimens.gapSmall))
-                    CarBadge("正在播放", palette.success)
+                    CarBadge(
+                        if (isPlaying) "正在播放" else "已暂停",
+                        if (isPlaying) palette.success else palette.warning,
+                    )
                 }
             }
         }
@@ -386,16 +392,26 @@ fun MediaCard(
             CarIconButton(CarGlyph.NEXT, "下一首", onNext, modifier = Modifier.size(dimens.touch - 8.dp))
         }
         Spacer(Modifier.weight(1f))
-        Text("下一首", style = LocalCarTypography.current.caption, color = palette.textTertiary)
-        Spacer(Modifier.height(dimens.gapSmall))
-        val next = FakeCarData.media.firstOrNull { it.title != media.title }
-        if (next != null) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                AlbumArt(next.accent, 30.dp)
-                Spacer(Modifier.width(dimens.gapSmall))
-                Column {
-                    Text(next.title, style = LocalCarTypography.current.bodySmall, color = palette.textPrimary, maxLines = 1)
-                    Text(next.artist, style = LocalCarTypography.current.caption, color = palette.textSecondary, maxLines = 1)
+        if (media.packageName != null) {
+            Text(
+                "来自 ${media.packageName}",
+                style = LocalCarTypography.current.caption,
+                color = palette.textTertiary,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+        } else {
+            Text("下一首", style = LocalCarTypography.current.caption, color = palette.textTertiary)
+            Spacer(Modifier.height(dimens.gapSmall))
+            val next = FakeCarData.media.firstOrNull { it.title != media.title }
+            if (next != null) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    AlbumArt(next.accent, 30.dp)
+                    Spacer(Modifier.width(dimens.gapSmall))
+                    Column {
+                        Text(next.title, style = LocalCarTypography.current.bodySmall, color = palette.textPrimary, maxLines = 1)
+                        Text(next.artist, style = LocalCarTypography.current.caption, color = palette.textSecondary, maxLines = 1)
+                    }
                 }
             }
         }
@@ -403,7 +419,12 @@ fun MediaCard(
 }
 
 @Composable
-fun AlbumArt(accent: Color, size: androidx.compose.ui.unit.Dp, modifier: Modifier = Modifier) {
+fun AlbumArt(
+    accent: Color,
+    size: androidx.compose.ui.unit.Dp,
+    modifier: Modifier = Modifier,
+    artwork: ImageBitmap? = null,
+) {
     val palette = LocalCarPalette.current
     Box(
         modifier = modifier
@@ -416,7 +437,16 @@ fun AlbumArt(accent: Color, size: androidx.compose.ui.unit.Dp, modifier: Modifie
             ),
         contentAlignment = Alignment.Center,
     ) {
-        CarIcon(CarGlyph.MUSIC, size = size * 0.38f, tint = Color.White.copy(alpha = 0.92f))
+        if (artwork != null) {
+            Image(
+                bitmap = artwork,
+                contentDescription = null,
+                contentScale = ContentScale.Crop,
+                modifier = Modifier.fillMaxSize(),
+            )
+        } else {
+            CarIcon(CarGlyph.MUSIC, size = size * 0.38f, tint = Color.White.copy(alpha = 0.92f))
+        }
     }
 }
 

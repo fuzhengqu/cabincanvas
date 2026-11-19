@@ -5,6 +5,7 @@ import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -26,6 +27,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Slider
 import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.Text
@@ -42,11 +44,14 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.ImageBitmap
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import io.github.fuzhengqu.cabincanvas.core.CarViewport
 import io.github.fuzhengqu.cabincanvas.data.CarAppCategory
+import io.github.fuzhengqu.cabincanvas.data.CarCallEntry
 import io.github.fuzhengqu.cabincanvas.data.CarContact
 import io.github.fuzhengqu.cabincanvas.data.CarGlyph
 import io.github.fuzhengqu.cabincanvas.data.CarMedia
@@ -82,6 +87,7 @@ fun CarMediaScreen(
 ) {
     val palette = LocalCarPalette.current
     val dimens = LocalCarDimens.current
+    val realMedia = media.packageName != null
     Column(modifier = Modifier.fillMaxSize()) {
         CarTopBar("音乐", onBack, subtitle = "媒体库 · ${media.artist}")
         Row(
@@ -89,7 +95,7 @@ fun CarMediaScreen(
             horizontalArrangement = Arrangement.spacedBy(dimens.pad),
         ) {
             Column(modifier = Modifier.weight(0.42f), verticalArrangement = Arrangement.spacedBy(dimens.gap)) {
-                AlbumArtLarge(media.accent, Modifier.fillMaxWidth().aspectRatio(1f))
+                AlbumArtLarge(media.accent, Modifier.fillMaxWidth().aspectRatio(1f), media.artwork)
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Column(modifier = Modifier.weight(1f)) {
                         Text(media.title, style = LocalCarTypography.current.title, color = palette.textPrimary, maxLines = 1, overflow = TextOverflow.Ellipsis)
@@ -136,35 +142,51 @@ fun CarMediaScreen(
                 GlassCard(modifier = Modifier.weight(1f).fillMaxWidth()) {
                     Text("歌词", style = LocalCarTypography.current.cardTitle, color = palette.textPrimary)
                     Spacer(Modifier.height(dimens.gapSmall))
-                    LazyColumn(verticalArrangement = Arrangement.spacedBy(dimens.gapSmall)) {
-                        items(FakeCarData.lyrics.size) { index ->
-                            Text(
-                                FakeCarData.lyrics[index],
-                                style = if (index == 0) LocalCarTypography.current.cardTitle else LocalCarTypography.current.body,
-                                color = if (index == 0) palette.primary else palette.textSecondary,
-                            )
+                    if (realMedia) {
+                        Text(
+                            "当前音乐应用未提供歌词",
+                            style = LocalCarTypography.current.bodySmall,
+                            color = palette.textSecondary,
+                        )
+                    } else {
+                        LazyColumn(verticalArrangement = Arrangement.spacedBy(dimens.gapSmall)) {
+                            items(FakeCarData.lyrics.size) { index ->
+                                Text(
+                                    FakeCarData.lyrics[index],
+                                    style = if (index == 0) LocalCarTypography.current.cardTitle else LocalCarTypography.current.body,
+                                    color = if (index == 0) palette.primary else palette.textSecondary,
+                                )
+                            }
                         }
                     }
                 }
                 GlassCard(modifier = Modifier.fillMaxWidth()) {
                     Text("播放队列", style = LocalCarTypography.current.cardTitle, color = palette.textPrimary)
                     Spacer(Modifier.height(dimens.gapSmall))
-                    FakeCarData.media.forEachIndexed { index, track ->
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .clip(RoundedCornerShape(dimens.cardRadiusSmall))
-                                .clickable { onSelectTrack(index) }
-                                .padding(vertical = dimens.gapSmall),
-                            verticalAlignment = Alignment.CenterVertically,
-                        ) {
-                            AlbumArt(track.accent, 36.dp)
-                            Spacer(Modifier.width(dimens.gapSmall))
-                            Column(modifier = Modifier.weight(1f)) {
-                                Text(track.title, style = LocalCarTypography.current.bodySmall, color = palette.textPrimary, maxLines = 1)
-                                Text(track.artist, style = LocalCarTypography.current.caption, color = palette.textSecondary, maxLines = 1)
+                    if (realMedia) {
+                        Text(
+                            "播放队列由 ${media.packageName} 管理",
+                            style = LocalCarTypography.current.bodySmall,
+                            color = palette.textSecondary,
+                        )
+                    } else {
+                        FakeCarData.media.forEachIndexed { index, track ->
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clip(RoundedCornerShape(dimens.cardRadiusSmall))
+                                    .clickable { onSelectTrack(index) }
+                                    .padding(vertical = dimens.gapSmall),
+                                verticalAlignment = Alignment.CenterVertically,
+                            ) {
+                                AlbumArt(track.accent, 36.dp)
+                                Spacer(Modifier.width(dimens.gapSmall))
+                                Column(modifier = Modifier.weight(1f)) {
+                                    Text(track.title, style = LocalCarTypography.current.bodySmall, color = palette.textPrimary, maxLines = 1)
+                                    Text(track.artist, style = LocalCarTypography.current.caption, color = palette.textSecondary, maxLines = 1)
+                                }
+                                if (track == media) CarBadge("播放中", palette.success)
                             }
-                            if (track == media) CarBadge("播放中", palette.success)
                         }
                     }
                 }
@@ -174,7 +196,7 @@ fun CarMediaScreen(
 }
 
 @Composable
-private fun AlbumArtLarge(accent: Color, modifier: Modifier = Modifier) {
+private fun AlbumArtLarge(accent: Color, modifier: Modifier = Modifier, artwork: ImageBitmap? = null) {
     val palette = LocalCarPalette.current
     Box(
         modifier = modifier
@@ -182,7 +204,16 @@ private fun AlbumArtLarge(accent: Color, modifier: Modifier = Modifier) {
             .background(Brush.linearGradient(listOf(accent.copy(alpha = 0.95f), palette.surfaceElevated, accent.copy(alpha = 0.45f)))),
         contentAlignment = Alignment.Center,
     ) {
-        CarIcon(CarGlyph.MUSIC, size = 84.dp, tint = Color.White.copy(alpha = 0.9f))
+        if (artwork != null) {
+            Image(
+                bitmap = artwork,
+                contentDescription = null,
+                contentScale = ContentScale.Crop,
+                modifier = Modifier.fillMaxSize(),
+            )
+        } else {
+            CarIcon(CarGlyph.MUSIC, size = 84.dp, tint = Color.White.copy(alpha = 0.9f))
+        }
     }
 }
 
@@ -190,6 +221,7 @@ private fun AlbumArtLarge(accent: Color, modifier: Modifier = Modifier) {
 fun CarPhoneScreen(
     viewport: CarViewport,
     contacts: List<CarContact>,
+    recent: List<CarCallEntry> = emptyList(),
     onBack: () -> Unit,
     onCall: (CarContact) -> Unit,
 ) {
@@ -215,8 +247,14 @@ fun CarPhoneScreen(
                 modifier = Modifier.fillMaxSize().padding(horizontal = dimens.pad),
                 verticalArrangement = Arrangement.spacedBy(dimens.gapSmall),
             ) {
-                items(contacts) { contact ->
-                    ContactRow(contact, "今天 09:41 · 已接听", onCall = { onCall(contact) })
+                val calls = if (recent.isNotEmpty()) {
+                    recent.map { it.contact to it.label }
+                } else {
+                    contacts.map { it to "联系人 · 点击呼叫" }
+                }
+                items(calls.size) { index ->
+                    val (contact, label) = calls[index]
+                    ContactRow(contact, label, onCall = { onCall(contact) })
                 }
             }
             1 -> LazyColumn(
@@ -319,11 +357,13 @@ fun CarNotificationsScreen(
     notifications: List<CarNotification>,
     onBack: () -> Unit,
     onClear: () -> Unit,
-    onReply: (CarNotification) -> Unit,
+    onReply: (CarNotification, String) -> Unit,
     onSimulate: () -> Unit,
 ) {
     val palette = LocalCarPalette.current
     val dimens = LocalCarDimens.current
+    var replyTo by remember { mutableStateOf<CarNotification?>(null) }
+    var replyText by remember { mutableStateOf("") }
     Column(modifier = Modifier.fillMaxSize()) {
         CarTopBar(
             "通知",
@@ -357,12 +397,40 @@ fun CarNotificationsScreen(
                         Text(notification.body, style = LocalCarTypography.current.bodySmall, color = palette.textSecondary, maxLines = 3, overflow = TextOverflow.Ellipsis)
                         if (notification.canReply) {
                             Spacer(Modifier.height(dimens.gapSmall))
-                            CarGhostButton("快捷回复", { onReply(notification) }, glyph = CarGlyph.CHAT)
+                            CarGhostButton("快捷回复", { replyTo = notification }, glyph = CarGlyph.CHAT)
                         }
                     }
                 }
             }
         }
+    }
+
+    val target = replyTo
+    if (target != null) {
+        AlertDialog(
+            onDismissRequest = { replyTo = null },
+            containerColor = palette.surfaceElevated,
+            title = { Text("回复 ${target.app}", color = palette.textPrimary) },
+            text = {
+                OutlinedTextField(
+                    value = replyText,
+                    onValueChange = { replyText = it },
+                    placeholder = { Text("输入回复", color = palette.textTertiary) },
+                    maxLines = 3,
+                    modifier = Modifier.fillMaxWidth(),
+                )
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    onReply(target, replyText)
+                    replyText = ""
+                    replyTo = null
+                }) { Text("发送", color = palette.primary) }
+            },
+            dismissButton = {
+                TextButton(onClick = { replyTo = null }) { Text("取消", color = palette.textSecondary) }
+            },
+        )
     }
 }
 

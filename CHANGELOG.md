@@ -2,6 +2,15 @@
 
 所有 notable changes 记录在这里。版本号规则见 README。
 
+## v0.04 — 2026-11-19
+
+- 接入真实媒体会话（MediaSessionManager）：封面、标题、艺术家、时长、进度、播放控制。
+- 接入真实通知监听（NotificationListenerService）：通知列表、快捷回复、清空。
+- 接入真实联系人、最近通话、通话状态（TelephonyCallback / PhoneStateListener）与接听/挂断。
+- 新增设置 → 数据源：通知使用权、电话/联系人/通话记录权限、刷新媒体会话。
+- 真实媒体没有歌词/队列时不再显示假内容；无权限时保留示例数据降级。
+- 版本基线：`versionName 0.04`，`versionCode 4`。
+
 ## v0.03 — 2026-11-19
 
 - 修复手机端首页标题/卡片标题在深色主题下对比度不足的问题。

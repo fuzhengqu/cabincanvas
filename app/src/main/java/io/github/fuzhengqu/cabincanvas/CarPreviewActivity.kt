@@ -1,12 +1,16 @@
 package io.github.fuzhengqu.cabincanvas
 
+import android.Manifest
 import android.content.Intent
 import android.os.Bundle
+import android.provider.Settings
 import android.view.WindowManager
 import android.widget.Toast
 import androidx.activity.ComponentActivity
+import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
@@ -37,6 +41,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Density
@@ -51,6 +56,7 @@ import io.github.fuzhengqu.cabincanvas.core.CarLayoutMode
 import io.github.fuzhengqu.cabincanvas.core.CarSizeClass
 import io.github.fuzhengqu.cabincanvas.core.CarViewport
 import io.github.fuzhengqu.cabincanvas.core.carViewportOf
+import io.github.fuzhengqu.cabincanvas.data.real.DataPermissions
 import io.github.fuzhengqu.cabincanvas.designsystem.CarThemeMode
 import io.github.fuzhengqu.cabincanvas.designsystem.CarWallpaper
 import io.github.fuzhengqu.cabincanvas.ui.theme.CabinCanvasTheme
@@ -79,6 +85,8 @@ private val previewProfiles = listOf(
 private val previewDpis = listOf(120, 160, 213, 240, 320, 480)
 
 class CarPreviewActivity : ComponentActivity() {
+    private var permissionEpoch by mutableIntStateOf(0)
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
@@ -97,9 +105,15 @@ class CarPreviewActivity : ComponentActivity() {
                     onExit = { finish() },
                     onOpenProbe = ::openProbe,
                     initialScreen = initialScreen,
+                    permissionEpoch = permissionEpoch,
                 )
             }
         }
+    }
+
+    override fun onResume() {
+        super.onResume()
+        permissionEpoch++
     }
 
     private fun openProbe() {
@@ -120,7 +134,16 @@ private fun CarPreviewScreen(
     onExit: () -> Unit,
     onOpenProbe: () -> Unit,
     initialScreen: CarScreen,
+    permissionEpoch: Int,
 ) {
+    val context = LocalContext.current
+    var permissionTick by remember { mutableIntStateOf(0) }
+    val effectiveEpoch = permissionEpoch + permissionTick
+    val notificationAccess = remember(effectiveEpoch) { DataPermissions.hasNotificationAccess(context) }
+    val phoneAccess = remember(effectiveEpoch) { DataPermissions.hasPhoneAccess(context) }
+    val permissionLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestMultiplePermissions(),
+    ) { permissionTick++ }
     var profile by remember { mutableStateOf(previewProfiles[2]) }
     var dpi by remember { mutableIntStateOf(profile.dpi) }
     var themeMode by remember { mutableStateOf(CarThemeMode.DARK) }
@@ -253,6 +276,26 @@ private fun CarPreviewScreen(
                         onLayoutModeChange = { layoutMode = it },
                         onOverscanChange = { overscan = it },
                         onOpenProbe = onOpenProbe,
+                        permissionEpoch = effectiveEpoch,
+                        notificationAccess = notificationAccess,
+                        phoneAccess = phoneAccess,
+                        onOpenNotificationAccess = {
+                            context.startActivity(
+                                Intent(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS)
+                                    .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
+                            )
+                        },
+                        onRequestPhonePermissions = {
+                            permissionLauncher.launch(
+                                arrayOf(
+                                    Manifest.permission.READ_PHONE_STATE,
+                                    Manifest.permission.READ_CONTACTS,
+                                    Manifest.permission.READ_CALL_LOG,
+                                    Manifest.permission.ANSWER_PHONE_CALLS,
+                                    Manifest.permission.CALL_PHONE,
+                                ),
+                            )
+                        },
                     )
                 }
             }

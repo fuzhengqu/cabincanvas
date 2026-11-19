@@ -7,7 +7,9 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableIntStateOf
@@ -26,9 +28,12 @@ import io.github.fuzhengqu.cabincanvas.data.CarAppEntry
 import io.github.fuzhengqu.cabincanvas.data.CarCardConfig
 import io.github.fuzhengqu.cabincanvas.data.CarCardSize
 import io.github.fuzhengqu.cabincanvas.data.CarCardType
-import io.github.fuzhengqu.cabincanvas.data.CarContact
 import io.github.fuzhengqu.cabincanvas.data.CarNotification
 import io.github.fuzhengqu.cabincanvas.data.FakeCarData
+import io.github.fuzhengqu.cabincanvas.data.real.CarCallStatus
+import io.github.fuzhengqu.cabincanvas.data.real.MediaRepository
+import io.github.fuzhengqu.cabincanvas.data.real.NotificationStore
+import io.github.fuzhengqu.cabincanvas.data.real.PhoneRepository
 import io.github.fuzhengqu.cabincanvas.designsystem.CarTheme
 import io.github.fuzhengqu.cabincanvas.designsystem.CarDarkPalette
 import io.github.fuzhengqu.cabincanvas.designsystem.CarThemeMode
@@ -55,6 +60,11 @@ fun CarApp(
     onLayoutModeChange: (CarLayoutMode) -> Unit,
     onOverscanChange: (Int) -> Unit,
     onOpenProbe: () -> Unit,
+    permissionEpoch: Int = 0,
+    notificationAccess: Boolean = false,
+    phoneAccess: Boolean = false,
+    onOpenNotificationAccess: () -> Unit = {},
+    onRequestPhonePermissions: () -> Unit = {},
 ) {
     val context = LocalContext.current
     var screen by remember(initialScreen) { mutableStateOf(initialScreen) }
@@ -64,11 +74,30 @@ fun CarApp(
     var selectedApp by remember { mutableStateOf<CarAppEntry?>(null) }
     var projectionMode by remember { mutableStateOf(CarProjectionMode.FULL) }
     var voiceVisible by remember { mutableStateOf(false) }
-    var incomingCall by remember { mutableStateOf<CarContact?>(null) }
-    var inCall by remember { mutableStateOf(false) }
     var toast by remember { mutableStateOf<CarNotification?>(null) }
-    var notifications by remember { mutableStateOf(FakeCarData.notifications) }
     var cards by remember { mutableStateOf(CarCardType.entries.map { CarCardConfig(it) }) }
+
+    val mediaRepo = remember { MediaRepository(context) }
+    val phoneRepo = remember { PhoneRepository(context) }
+    DisposableEffect(Unit) {
+        mediaRepo.start()
+        phoneRepo.start()
+        onDispose {
+            mediaRepo.stop()
+            phoneRepo.stop()
+        }
+    }
+    LaunchedEffect(permissionEpoch) {
+        mediaRepo.refresh()
+        phoneRepo.refresh()
+        NotificationStore.requestRebind(context)
+    }
+
+    val mediaState by mediaRepo.state.collectAsState()
+    val notifications by NotificationStore.notifications.collectAsState()
+    val contacts by phoneRepo.contacts.collectAsState()
+    val recent by phoneRepo.recent.collectAsState()
+    val callState by phoneRepo.call.collectAsState()
 
     val installed by produceState(initialValue = emptyList<CarAppEntry>()) {
         value = AppCatalog.load(context)
@@ -76,15 +105,26 @@ fun CarApp(
     val apps = remember(installed) {
         if (installed.size >= 6) installed else FakeCarData.fallbackApps
     }
-    val media = FakeCarData.media[mediaIndex]
 
-    LaunchedEffect(isPlaying, mediaIndex) {
-        while (isPlaying) {
-            delay(1000)
-            progress += 1000f / media.durationMs.toFloat()
-            if (progress >= 1f) {
-                progress = 0f
-                mediaIndex = (mediaIndex + 1) % FakeCarData.media.size
+    val demoMedia = FakeCarData.media[mediaIndex]
+    val realMedia = mediaState.media
+    val media = realMedia ?: demoMedia
+    val playing = if (realMedia != null) mediaState.isPlaying else isPlaying
+    val mediaProgress = if (realMedia != null) {
+        (mediaState.positionMs.toFloat() / media.durationMs.toFloat()).coerceIn(0f, 1f)
+    } else {
+        progress
+    }
+
+    LaunchedEffect(isPlaying, mediaIndex, realMedia) {
+        if (realMedia == null && isPlaying) {
+            while (true) {
+                delay(1000)
+                progress += 1000f / demoMedia.durationMs.toFloat()
+                if (progress >= 1f) {
+                    progress = 0f
+                    mediaIndex = (mediaIndex + 1) % FakeCarData.media.size
+                }
             }
         }
     }
@@ -115,8 +155,7 @@ fun CarApp(
     BackHandler(enabled = true) {
         when {
             voiceVisible -> voiceVisible = false
-            inCall -> inCall = false
-            incomingCall != null -> incomingCall = null
+            callState.status != CarCallStatus.IDLE -> phoneRepo.hangup()
             screen == CarScreen.PROJECTION -> screen = CarScreen.APPS
             screen != CarScreen.HOME -> screen = CarScreen.HOME
         }
@@ -134,20 +173,30 @@ fun CarApp(
                     CarScreen.HOME -> CarHome(
                         viewport = viewport,
                         media = media,
-                        isPlaying = isPlaying,
-                        progress = progress,
+                        isPlaying = playing,
+                        progress = mediaProgress,
                         weather = FakeCarData.weather,
                         route = FakeCarData.route,
                         suggestions = FakeCarData.suggestions,
                         notifications = notifications,
-                        onTogglePlay = { isPlaying = !isPlaying },
+                        onTogglePlay = {
+                            if (realMedia != null) mediaRepo.toggle() else isPlaying = !isPlaying
+                        },
                         onNext = {
-                            mediaIndex = (mediaIndex + 1) % FakeCarData.media.size
-                            progress = 0f
+                            if (realMedia != null) {
+                                mediaRepo.next()
+                            } else {
+                                mediaIndex = (mediaIndex + 1) % FakeCarData.media.size
+                                progress = 0f
+                            }
                         },
                         onPrev = {
-                            mediaIndex = (mediaIndex - 1 + FakeCarData.media.size) % FakeCarData.media.size
-                            progress = 0f
+                            if (realMedia != null) {
+                                mediaRepo.previous()
+                            } else {
+                                mediaIndex = (mediaIndex - 1 + FakeCarData.media.size) % FakeCarData.media.size
+                                progress = 0f
+                            }
                         },
                         onOpenMedia = { screen = CarScreen.MEDIA },
                         onOpenApps = { screen = CarScreen.APPS },
@@ -174,20 +223,30 @@ fun CarApp(
                                 app = app,
                                 mode = projectionMode,
                                 media = media,
-                                isPlaying = isPlaying,
-                                progress = progress,
+                                isPlaying = playing,
+                                progress = mediaProgress,
                                 onBack = { screen = CarScreen.APPS },
                                 onHome = { screen = CarScreen.HOME },
                                 onApps = { screen = CarScreen.APPS },
                                 onModeChange = { projectionMode = it },
-                                onTogglePlay = { isPlaying = !isPlaying },
+                                onTogglePlay = {
+                                    if (realMedia != null) mediaRepo.toggle() else isPlaying = !isPlaying
+                                },
                                 onNext = {
-                                    mediaIndex = (mediaIndex + 1) % FakeCarData.media.size
-                                    progress = 0f
+                                    if (realMedia != null) {
+                                        mediaRepo.next()
+                                    } else {
+                                        mediaIndex = (mediaIndex + 1) % FakeCarData.media.size
+                                        progress = 0f
+                                    }
                                 },
                                 onPrev = {
-                                    mediaIndex = (mediaIndex - 1 + FakeCarData.media.size) % FakeCarData.media.size
-                                    progress = 0f
+                                    if (realMedia != null) {
+                                        mediaRepo.previous()
+                                    } else {
+                                        mediaIndex = (mediaIndex - 1 + FakeCarData.media.size) % FakeCarData.media.size
+                                        progress = 0f
+                                    }
                                 },
                                 onVoice = { voiceVisible = true },
                             )
@@ -196,37 +255,63 @@ fun CarApp(
                     CarScreen.MEDIA -> CarMediaScreen(
                         viewport = viewport,
                         media = media,
-                        isPlaying = isPlaying,
-                        progress = progress,
+                        isPlaying = playing,
+                        progress = mediaProgress,
                         onBack = { screen = CarScreen.HOME },
-                        onTogglePlay = { isPlaying = !isPlaying },
+                        onTogglePlay = {
+                            if (realMedia != null) mediaRepo.toggle() else isPlaying = !isPlaying
+                        },
                         onNext = {
-                            mediaIndex = (mediaIndex + 1) % FakeCarData.media.size
-                            progress = 0f
+                            if (realMedia != null) {
+                                mediaRepo.next()
+                            } else {
+                                mediaIndex = (mediaIndex + 1) % FakeCarData.media.size
+                                progress = 0f
+                            }
                         },
                         onPrev = {
-                            mediaIndex = (mediaIndex - 1 + FakeCarData.media.size) % FakeCarData.media.size
-                            progress = 0f
+                            if (realMedia != null) {
+                                mediaRepo.previous()
+                            } else {
+                                mediaIndex = (mediaIndex - 1 + FakeCarData.media.size) % FakeCarData.media.size
+                                progress = 0f
+                            }
                         },
-                        onSeek = { progress = it },
-                        onSelectTrack = { mediaIndex = it; progress = 0f },
+                        onSeek = {
+                            if (realMedia != null) {
+                                mediaRepo.seekTo((it * media.durationMs).toLong())
+                            } else {
+                                progress = it
+                            }
+                        },
+                        onSelectTrack = {
+                            if (realMedia == null) {
+                                mediaIndex = it
+                                progress = 0f
+                            }
+                        },
                     )
                     CarScreen.PHONE -> CarPhoneScreen(
                         viewport = viewport,
-                        contacts = FakeCarData.contacts,
+                        contacts = contacts,
+                        recent = recent,
                         onBack = { screen = CarScreen.HOME },
-                        onCall = { incomingCall = it },
+                        onCall = { phoneRepo.demoIncoming(it) },
                     )
                     CarScreen.NOTIFICATIONS -> CarNotificationsScreen(
                         notifications = notifications,
                         onBack = { screen = CarScreen.HOME },
-                        onClear = { notifications = emptyList() },
-                        onReply = {
-                            showToast("已发送快捷回复", "给 ${it.app} 的回复已进入发送队列")
+                        onClear = { NotificationStore.clear() },
+                        onReply = { notification, text ->
+                            val ok = NotificationStore.reply(context, notification.key, text)
+                            showToast(
+                                if (ok) "已发送回复" else "无法回复",
+                                if (ok) "回复已发送给 ${notification.app}" else "该通知不支持快捷回复，或已失效",
+                            )
                         },
                         onSimulate = {
                             val n = FakeCarData.notifications.random()
-                            notifications = listOf(n) + notifications
+                            NotificationStore.addDemo(n)
                             toast = n
                         },
                     )
@@ -245,8 +330,17 @@ fun CarApp(
                         onOnboarding = { screen = CarScreen.ONBOARDING },
                         onSimulateNotification = {
                             val n = FakeCarData.notifications.random()
-                            notifications = listOf(n) + notifications
+                            NotificationStore.addDemo(n)
                             toast = n
+                        },
+                        notificationAccess = notificationAccess,
+                        phoneAccess = phoneAccess,
+                        onOpenNotificationAccess = onOpenNotificationAccess,
+                        onRequestPhonePermissions = onRequestPhonePermissions,
+                        onRefreshData = {
+                            mediaRepo.refresh()
+                            phoneRepo.refresh()
+                            showToast("已刷新数据源", "媒体会话与联系人已重新读取")
                         },
                     )
                     CarScreen.THEME -> CarThemePickerScreen(
@@ -284,7 +378,7 @@ fun CarApp(
                         onShareLog = { showToast("日志已准备", "预览模式不会写出真实日志；M0 探针会导出 probe.log") },
                         onSimulateNotification = {
                             val n = FakeCarData.notifications.random()
-                            notifications = listOf(n) + notifications
+                            NotificationStore.addDemo(n)
                             toast = n
                         },
                     )
@@ -301,7 +395,10 @@ fun CarApp(
                         voiceVisible = false
                         when {
                             command.contains("导航") -> openNavi()
-                            command.contains("播放") -> { isPlaying = true; screen = CarScreen.MEDIA }
+                            command.contains("播放") -> {
+                                if (realMedia != null) mediaRepo.toggle() else isPlaying = true
+                                screen = CarScreen.MEDIA
+                            }
                             command.contains("电话") -> screen = CarScreen.PHONE
                             command.contains("应用") -> screen = CarScreen.APPS
                             command.contains("天气") -> showToast("上海 26° 多云", "今天 21°–29°，适合出行")
@@ -311,16 +408,25 @@ fun CarApp(
                     onDismiss = { voiceVisible = false },
                 )
             }
-            val call = incomingCall
-            if (call != null && !inCall) {
+            val callContact = callState.contact
+            if (callState.status == CarCallStatus.RINGING && callContact != null) {
                 IncomingCallOverlay(
-                    contact = call,
-                    onAnswer = { incomingCall = null; inCall = true },
-                    onDecline = { incomingCall = null; showToast("已挂断", "未接来电：${call.name}") },
+                    contact = callContact,
+                    onAnswer = { phoneRepo.answer() },
+                    onDecline = {
+                        phoneRepo.hangup()
+                        showToast("已挂断", "未接来电：${callContact.name}")
+                    },
                 )
             }
-            if (inCall && call != null) {
-                InCallOverlay(contact = call, onHangup = { inCall = false; showToast("通话结束", call.name) })
+            if (callState.status == CarCallStatus.OFFHOOK && callContact != null) {
+                InCallOverlay(
+                    contact = callContact,
+                    onHangup = {
+                        phoneRepo.hangup()
+                        showToast("通话结束", callContact.name)
+                    },
+                )
             }
             val currentToast = toast
             if (currentToast != null) {
