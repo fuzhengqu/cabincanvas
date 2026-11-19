@@ -28,6 +28,7 @@ secrets.properties
 .tools/
 logs/
 captures/
+artifacts/
 *.log
 *.hprof
 

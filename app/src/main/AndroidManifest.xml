@@ -5,6 +5,10 @@
     <queries>
         <package android:name="io.github.fuzhengqu.cabincanvas.probe.c" />
         <package android:name="com.baidu.carlife.oppo" />
+        <intent>
+            <action android:name="android.intent.action.MAIN" />
+            <category android:name="android.intent.category.LAUNCHER" />
+        </intent>
     </queries>
 
     <application
@@ -26,6 +30,13 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+
+        <activity
+            android:name=".CarPreviewActivity"
+            android:configChanges="orientation|screenSize|screenLayout|keyboardHidden|uiMode"
+            android:exported="true"
+            android:screenOrientation="sensorLandscape"
+            android:theme="@style/Theme.CabinCanvas.Preview" />
 
     </application>
 

@@ -49,16 +49,15 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
         setContent {
             CabinCanvasTheme {
-                HomeScreen()
+                PhoneHome()
             }
         }
     }
 }
 
 @Composable
-private fun HomeScreen() {
+private fun PhoneHome() {
     val context = LocalContext.current
-
     Box(
         modifier = Modifier
             .fillMaxSize()
@@ -98,7 +97,7 @@ private fun HomeScreen() {
                 )
             }
 
-            Spacer(Modifier.height(24.dp))
+            Spacer(Modifier.height(22.dp))
 
             Card(
                 shape = RoundedCornerShape(24.dp),
@@ -107,20 +106,40 @@ private fun HomeScreen() {
             ) {
                 Column(modifier = Modifier.padding(20.dp)) {
                     Text(
-                        text = "M0 · 链路验证",
+                        text = "完整车机 UI 预览",
                         style = MaterialTheme.typography.titleLarge,
                         fontWeight = FontWeight.SemiBold,
                     )
                     Spacer(Modifier.height(6.dp))
                     Text(
-                        text = "先回答“走百度引擎，还是走 headswap 自研传输”，再进入车机桌面开发。",
+                        text = "15 个页面/浮层 · 800×480 到 8K 自适应布局 · 无需连接车机",
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         style = MaterialTheme.typography.bodyMedium,
                     )
+                    Spacer(Modifier.height(16.dp))
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Pill("首页")
+                        Pill("应用中心")
+                        Pill("投屏")
+                        Pill("媒体/电话")
+                        Pill("设置")
+                    }
                     Spacer(Modifier.height(18.dp))
-                    StatusRow("CarLife 引擎", "待真车验证", Color(0xFFFFB020))
-                    StatusRow("传输层", "C / B 双轨待选", Color(0xFF2F6BFF))
-                    StatusRow("车机", "869 8 英寸 · 无线待确认", Color(0xFF19A974))
+                    Button(
+                        onClick = { context.startActivity(Intent(context, CarPreviewActivity::class.java)) },
+                        shape = RoundedCornerShape(18.dp),
+                        modifier = Modifier.fillMaxWidth().height(56.dp),
+                    ) {
+                        Text("打开车机 UI 预览", fontWeight = FontWeight.SemiBold)
+                    }
+                    Spacer(Modifier.height(10.dp))
+                    OutlinedButton(
+                        onClick = { openProbe(context) },
+                        shape = RoundedCornerShape(18.dp),
+                        modifier = Modifier.fillMaxWidth().height(52.dp),
+                    ) {
+                        Text("打开 M0 探针 C")
+                    }
                 }
             }
 
@@ -133,46 +152,38 @@ private fun HomeScreen() {
             ) {
                 Column(modifier = Modifier.padding(20.dp)) {
                     Text(
-                        text = "下一步",
+                        text = "当前状态",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.SemiBold,
+                    )
+                    Spacer(Modifier.height(12.dp))
+                    StatusRow("UI 版本", "v${BuildConfig.VERSION_NAME} (${BuildConfig.VERSION_CODE})", Color(0xFF2F6BFF))
+                    StatusRow("M0 探针", "v${BuildConfig.VERSION_NAME}", Color(0xFFFFB020))
+                    StatusRow("目标车机", "869 8 英寸 · 无线待确认", Color(0xFF19A974))
+                    StatusRow("布局范围", "800×480 / 720p / 1080p / 2K / 4K / 6K / 8K", Color(0xFF8B5CF6))
+                }
+            }
+
+            Spacer(Modifier.height(16.dp))
+
+            Card(
+                shape = RoundedCornerShape(24.dp),
+                colors = CardDefaults.cardColors(containerColor = Color(0xFF151823).copy(alpha = 0.72f)),
+                modifier = Modifier.fillMaxWidth(),
+            ) {
+                Column(modifier = Modifier.padding(20.dp)) {
+                    Text(
+                        text = "这一版包含",
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.SemiBold,
                     )
                     Spacer(Modifier.height(10.dp))
-                    Bullet("安装探针 C，真车验证 prepareCast 与虚拟屏")
-                    Bullet("打开 headswap DESKTOP，验证触摸与音频")
-                    Bullet("记录 869 分辨率 / 固件 / 无线入口")
-                    Bullet("写 M0-REPORT.md，确定 C/B 路线")
+                    Bullet("车机首页：状态栏、左 Dock / 底部胶囊、地图卡、媒体卡、建议卡、时钟天气")
+                    Bullet("应用中心：真实已安装应用、分类、搜索、长按菜单、应用详情")
+                    Bullet("投屏容器：全屏 / 兼容 / 手机比例 / 分屏 / 沉浸模式")
+                    Bullet("媒体、电话、通知、语音浮层、设置、卡片管理、校准、诊断、引导、主题壁纸")
+                    Bullet("分辨率无关布局：CarViewport + CarLayoutPolicy，自动列数/Dock/字号")
                 }
-            }
-
-            Spacer(Modifier.height(24.dp))
-
-            Button(
-                onClick = { openProbe(context) },
-                shape = RoundedCornerShape(18.dp),
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(56.dp),
-            ) {
-                Text("打开 M0 探针 C", fontWeight = FontWeight.SemiBold)
-            }
-
-            Spacer(Modifier.height(10.dp))
-
-            OutlinedButton(
-                onClick = {
-                    Toast.makeText(
-                        context,
-                        "编译版本 ${BuildConfig.VERSION_NAME} (${BuildConfig.VERSION_CODE})",
-                        Toast.LENGTH_SHORT,
-                    ).show()
-                },
-                shape = RoundedCornerShape(18.dp),
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(52.dp),
-            ) {
-                Text("构建信息")
             }
 
             Spacer(Modifier.height(24.dp))
@@ -187,24 +198,29 @@ private fun HomeScreen() {
 }
 
 @Composable
+private fun Pill(text: String) {
+    Box(
+        modifier = Modifier
+            .background(Color(0xFF2F6BFF).copy(alpha = 0.14f), RoundedCornerShape(50))
+            .padding(horizontal = 10.dp, vertical = 5.dp),
+    ) {
+        Text(text, color = Color(0xFF8FB0FF), style = MaterialTheme.typography.labelSmall)
+    }
+}
+
+@Composable
 private fun StatusRow(label: String, value: String, color: Color) {
     Row(
         verticalAlignment = Alignment.CenterVertically,
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(vertical = 5.dp),
+        modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
         horizontalArrangement = Arrangement.spacedBy(10.dp),
     ) {
-        Box(
-            modifier = Modifier
-                .size(8.dp)
-                .background(color, CircleShape),
-        )
+        Box(modifier = Modifier.size(8.dp).background(color, CircleShape))
         Text(
             text = label,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             style = MaterialTheme.typography.bodyMedium,
-            modifier = Modifier.width(104.dp),
+            modifier = Modifier.width(92.dp),
         )
         Text(
             text = value,
@@ -236,6 +252,6 @@ private fun openProbe(context: Context) {
     try {
         context.startActivity(intent)
     } catch (_: Exception) {
-        Toast.makeText(context, context.getString(R.string.probe_missing), Toast.LENGTH_SHORT).show()
+        Toast.makeText(context, "未安装 M0 探针 C", Toast.LENGTH_SHORT).show()
     }
 }
