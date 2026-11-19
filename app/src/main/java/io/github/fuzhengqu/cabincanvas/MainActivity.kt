@@ -82,6 +82,7 @@ private fun PhoneHome() {
                         style = MaterialTheme.typography.headlineLarge,
                         fontWeight = FontWeight.Bold,
                         letterSpacing = (-0.5).sp,
+                        color = MaterialTheme.colorScheme.onBackground,
                     )
                     Text(
                         text = "座舱画布 · 把手机应用画到车机",
@@ -101,7 +102,10 @@ private fun PhoneHome() {
 
             Card(
                 shape = RoundedCornerShape(24.dp),
-                colors = CardDefaults.cardColors(containerColor = Color(0xFF151823).copy(alpha = 0.94f)),
+                colors = CardDefaults.cardColors(
+                    containerColor = Color(0xFF151823).copy(alpha = 0.94f),
+                    contentColor = Color(0xFFE8EAF2),
+                ),
                 modifier = Modifier.fillMaxWidth(),
             ) {
                 Column(modifier = Modifier.padding(20.dp)) {
@@ -147,7 +151,10 @@ private fun PhoneHome() {
 
             Card(
                 shape = RoundedCornerShape(24.dp),
-                colors = CardDefaults.cardColors(containerColor = Color(0xFF151823).copy(alpha = 0.78f)),
+                colors = CardDefaults.cardColors(
+                    containerColor = Color(0xFF151823).copy(alpha = 0.78f),
+                    contentColor = Color(0xFFE8EAF2),
+                ),
                 modifier = Modifier.fillMaxWidth(),
             ) {
                 Column(modifier = Modifier.padding(20.dp)) {
@@ -168,7 +175,10 @@ private fun PhoneHome() {
 
             Card(
                 shape = RoundedCornerShape(24.dp),
-                colors = CardDefaults.cardColors(containerColor = Color(0xFF151823).copy(alpha = 0.72f)),
+                colors = CardDefaults.cardColors(
+                    containerColor = Color(0xFF151823).copy(alpha = 0.72f),
+                    contentColor = Color(0xFFE8EAF2),
+                ),
                 modifier = Modifier.fillMaxWidth(),
             ) {
                 Column(modifier = Modifier.padding(20.dp)) {
