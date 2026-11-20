@@ -2,6 +2,12 @@
 
 所有 notable changes 记录在这里。版本号规则见 README。
 
+## v0.05 — 2026-11-20
+
+- DataStore 持久化主题、壁纸、布局、overscan 校准值。
+- 新增诊断页“测试通知回复”，验证 RemoteInput 快捷回复链路。
+- 设置/主题/校准修改立即落盘。
+
 ## v0.04 — 2026-11-19
 
 - 接入真实媒体会话（MediaSessionManager）：封面、标题、艺术家、时长、进度、播放控制。

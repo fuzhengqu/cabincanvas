@@ -32,10 +32,13 @@ import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -56,10 +59,13 @@ import io.github.fuzhengqu.cabincanvas.core.CarLayoutMode
 import io.github.fuzhengqu.cabincanvas.core.CarSizeClass
 import io.github.fuzhengqu.cabincanvas.core.CarViewport
 import io.github.fuzhengqu.cabincanvas.core.carViewportOf
+import io.github.fuzhengqu.cabincanvas.data.real.CarSettings
+import io.github.fuzhengqu.cabincanvas.data.real.CarSettingsStore
 import io.github.fuzhengqu.cabincanvas.data.real.DataPermissions
 import io.github.fuzhengqu.cabincanvas.designsystem.CarThemeMode
 import io.github.fuzhengqu.cabincanvas.designsystem.CarWallpaper
 import io.github.fuzhengqu.cabincanvas.ui.theme.CabinCanvasTheme
+import kotlinx.coroutines.launch
 import kotlin.math.min
 
 private data class PreviewProfile(
@@ -150,6 +156,20 @@ private fun CarPreviewScreen(
     var wallpaper by remember { mutableStateOf(CarWallpaper.AURORA) }
     var layoutMode by remember { mutableStateOf(CarLayoutMode.AUTO) }
     var overscan by remember { mutableIntStateOf(0) }
+    val settingsStore = remember { CarSettingsStore(context) }
+    val storedSettings by settingsStore.settings.collectAsState(initial = null)
+    val scope = rememberCoroutineScope()
+    var settingsLoaded by remember { mutableStateOf(false) }
+    LaunchedEffect(storedSettings) {
+        val stored = storedSettings ?: return@LaunchedEffect
+        if (!settingsLoaded) {
+            themeMode = stored.themeMode
+            wallpaper = stored.wallpaper
+            layoutMode = stored.layoutMode
+            overscan = stored.overscanPercent
+            settingsLoaded = true
+        }
+    }
 
     Column(modifier = Modifier.fillMaxSize().background(Color(0xFF05070C))) {
         Row(
@@ -201,6 +221,7 @@ private fun CarPreviewScreen(
                     selected = false,
                     onClick = {
                         wallpaper = CarWallpaper.entries[(wallpaper.ordinal + 1) % CarWallpaper.entries.size]
+                        scope.launch { settingsStore.setWallpaper(wallpaper) }
                     },
                     label = { Text("壁纸：${wallpaper.label}") },
                 )
@@ -214,6 +235,7 @@ private fun CarPreviewScreen(
                             CarThemeMode.LIGHT -> CarThemeMode.AUTO
                             CarThemeMode.AUTO -> CarThemeMode.DARK
                         }
+                        scope.launch { settingsStore.setThemeMode(themeMode) }
                     },
                     label = { Text("主题：${themeMode.label()}") },
                 )
@@ -227,6 +249,7 @@ private fun CarPreviewScreen(
                             CarLayoutMode.CLASSIC -> CarLayoutMode.FUSION
                             CarLayoutMode.FUSION -> CarLayoutMode.AUTO
                         }
+                        scope.launch { settingsStore.setLayoutMode(layoutMode) }
                     },
                     label = { Text("布局：${layoutMode.label()}") },
                 )
@@ -271,10 +294,22 @@ private fun CarPreviewScreen(
                         layoutMode = layoutMode,
                         overscanPercent = overscan,
                         initialScreen = initialScreen,
-                        onThemeChange = { themeMode = it },
-                        onWallpaperChange = { wallpaper = it },
-                        onLayoutModeChange = { layoutMode = it },
-                        onOverscanChange = { overscan = it },
+                        onThemeChange = {
+                            themeMode = it
+                            scope.launch { settingsStore.setThemeMode(it) }
+                        },
+                        onWallpaperChange = {
+                            wallpaper = it
+                            scope.launch { settingsStore.setWallpaper(it) }
+                        },
+                        onLayoutModeChange = {
+                            layoutMode = it
+                            scope.launch { settingsStore.setLayoutMode(it) }
+                        },
+                        onOverscanChange = {
+                            overscan = it
+                            scope.launch { settingsStore.setOverscan(it) }
+                        },
                         onOpenProbe = onOpenProbe,
                         permissionEpoch = effectiveEpoch,
                         notificationAccess = notificationAccess,
@@ -293,6 +328,7 @@ private fun CarPreviewScreen(
                                     Manifest.permission.READ_CALL_LOG,
                                     Manifest.permission.ANSWER_PHONE_CALLS,
                                     Manifest.permission.CALL_PHONE,
+                                    Manifest.permission.POST_NOTIFICATIONS,
                                 ),
                             )
                         },

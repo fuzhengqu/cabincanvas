@@ -32,6 +32,7 @@ import io.github.fuzhengqu.cabincanvas.data.CarNotification
 import io.github.fuzhengqu.cabincanvas.data.FakeCarData
 import io.github.fuzhengqu.cabincanvas.data.real.CarCallStatus
 import io.github.fuzhengqu.cabincanvas.data.real.MediaRepository
+import io.github.fuzhengqu.cabincanvas.data.real.NotificationReplyTest
 import io.github.fuzhengqu.cabincanvas.data.real.NotificationStore
 import io.github.fuzhengqu.cabincanvas.data.real.PhoneRepository
 import io.github.fuzhengqu.cabincanvas.designsystem.CarTheme
@@ -380,6 +381,13 @@ fun CarApp(
                             val n = FakeCarData.notifications.random()
                             NotificationStore.addDemo(n)
                             toast = n
+                        },
+                        onTestReply = {
+                            val ok = NotificationReplyTest.post(context)
+                            showToast(
+                                if (ok) "已发送回复测试通知" else "无法发送测试通知",
+                                if (ok) "在通知中心点“快捷回复”，发送后查看 logcat：CabinCanvasReply" else "请先授予通知权限",
+                            )
                         },
                     )
                     CarScreen.ONBOARDING -> CarOnboardingScreen(

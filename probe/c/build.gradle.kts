@@ -19,8 +19,8 @@ android {
         applicationId = "io.github.fuzhengqu.cabincanvas.probe.c"
         minSdk = 29
         targetSdk = 37
-        versionCode = 4
-        versionName = "0.04"
+        versionCode = 5
+        versionName = "0.05"
     }
 
     signingConfigs {

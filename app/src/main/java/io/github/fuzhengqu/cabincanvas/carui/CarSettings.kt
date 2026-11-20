@@ -416,6 +416,7 @@ fun CarDiagnosticsScreen(
     onOpenProbe: () -> Unit,
     onShareLog: () -> Unit,
     onSimulateNotification: () -> Unit,
+    onTestReply: () -> Unit = {},
 ) {
     val palette = LocalCarPalette.current
     val dimens = LocalCarDimens.current
@@ -451,6 +452,7 @@ fun CarDiagnosticsScreen(
                 CarPrimaryButton("打开 M0 探针", onOpenProbe, Modifier.fillMaxWidth(), CarGlyph.BUG)
                 CarGhostButton("分享日志", onShareLog, Modifier.fillMaxWidth(), CarGlyph.SHARE)
                 CarGhostButton("模拟通知", onSimulateNotification, Modifier.fillMaxWidth(), CarGlyph.NOTIFICATION)
+                CarGhostButton("测试通知回复", onTestReply, Modifier.fillMaxWidth(), CarGlyph.CHAT)
             }
             GlassCard(modifier = Modifier.weight(0.58f).fillMaxSize()) {
                 Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {

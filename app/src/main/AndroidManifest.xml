@@ -7,6 +7,7 @@
     <uses-permission android:name="android.permission.READ_CALL_LOG" />
     <uses-permission android:name="android.permission.ANSWER_PHONE_CALLS" />
     <uses-permission android:name="android.permission.CALL_PHONE" />
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
 
     <uses-feature
         android:name="android.hardware.telephony"
@@ -63,6 +64,10 @@
                 android:name="android.service.notification.default_autobind_listenerservice"
                 android:value="false" />
         </service>
+
+        <receiver
+            android:name=".data.real.ReplyEchoReceiver"
+            android:exported="false" />
 
     </application>
 

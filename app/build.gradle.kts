@@ -20,8 +20,8 @@ android {
         applicationId = "io.github.fuzhengqu.cabincanvas"
         minSdk = 29
         targetSdk = 37
-        versionCode = 4
-        versionName = "0.04"
+        versionCode = 5
+        versionName = "0.05"
         vectorDrawables.useSupportLibrary = true
     }
 
@@ -82,6 +82,7 @@ dependencies {
     implementation(libs.androidx.compose.foundation)
     implementation(libs.androidx.compose.animation)
     implementation(libs.androidx.compose.material.icons.extended)
+    implementation(libs.androidx.datastore.preferences)
 
     debugImplementation(libs.androidx.compose.ui.tooling)
 }
